@@ -1,0 +1,921 @@
+     1                                  ; Author:   Arsh Sekhon
+     2                                  ; Date:     March 6, 2019
+     3                                  
+     4                                  
+     5                                  ; data section
+     6                                  section .data
+     7                                      ; user prompt
+     8 00000000 456E746572206E616D-         player_name_prompt             db      "Enter name of player ", 0
+     8 00000009 65206F6620706C6179-
+     8 00000012 65722000           
+     9                                      player_name_prompt_len              equ     $-player_name_prompt
+    10                                  
+    11                                      ; some symbols to be used
+    12 00000016 3A20                        colon                   db      ": "
+    13 00000018 5F                          underscore_symbol       db     "_"
+    14 00000019 7C                          pipe_symbol             db     "|"
+    15                                  
+    16 0000001A 58                          x_symbol                db     "X"
+    17 0000001B 4F                          o_symbol                db     "O"
+    18                                  
+    19 0000001C 20                          space                   db     " "
+    20                                  
+    21 0000001D 20285829                    x_symbol_braced         db     " (X)"
+    22                                      x_symbol_braced_len     equ    $-x_symbol_braced
+    23                                  
+    24 00000021 20284F29                    o_symbol_braced         db     " (O)"
+    25                                      o_symbol_braced_len     equ    $-o_symbol_braced
+    26                                  
+    27                                      
+    28 00000025 2773207475726E3A20-         turn_prompt_text       db     "'s turn: Please enter the position to place your sign (1-9): "
+    28 0000002E 506C6561736520656E-
+    28 00000037 746572207468652070-
+    28 00000040 6F736974696F6E2074-
+    28 00000049 6F20706C6163652079-
+    28 00000052 6F7572207369676E20-
+    28 0000005B 28312D39293A20     
+    29                                      turn_prompt_text_len   equ    $-turn_prompt_text
+    30                                  
+    31 00000062 2C20436F6E67726174-         winner_dec_text       db     ", Congratulations! You are the WINNER !!! ",0xA, 0xD,0xA, 0xD
+    31 0000006B 756C6174696F6E7321-
+    31 00000074 20596F752061726520-
+    31 0000007D 7468652057494E4E45-
+    31 00000086 5220212121200A0D0A-
+    31 0000008F 0D                 
+    32                                      winner_dec_text_len   equ    $-winner_dec_text
+    33                                     
+    34 00000090 596F7520626F746820-         draw_text             db     "You both are amazing!! It was a draw.",0xA, 0xD,0xA, 0xD
+    34 00000099 61726520616D617A69-
+    34 000000A2 6E6721212049742077-
+    34 000000AB 617320612064726177-
+    34 000000B4 2E0A0D0A0D         
+    35                                      draw_text_len   equ    $-draw_text
+    36                                  
+    37                                  
+    38 000000B9 20762F7320                  vs_text                 db     " v/s "
+    39                                      vs_text_len             equ     $-vs_text
+    40                                      
+    41 000000BE 0A0D                        new_line_token          db      0xA, 0xD
+    42                                      new_line_token_len      equ     $-new_line_token
+    43                                  
+    44                                  
+    45 000000C0 43616E6E6F7420506C-         placement_error_txt         db      "Cannot Place a marker at this position, Try Again!",0xA, 0xD
+    45 000000C9 6163652061206D6172-
+    45 000000D2 6B6572206174207468-
+    45 000000DB 697320706F73697469-
+    45 000000E4 6F6E2C205472792041-
+    45 000000ED 6761696E210A0D     
+    46                                      placement_error_txt_len     equ     $-placement_error_txt
+    47                                  
+    48                                      ;o_board_sign            db      1
+    49 000000F4 00                          tokens_placed            db      0
+    50                                  
+    51                                      ; pointer to the Tic-Tac-Toe Board
+    54 000000F5 313233343536373839          board                   db      "1","2","3",                                    "4","5","6",                                    "7","8","9"
+    55                                   
+    56                                  
+    57                                  ; bss section
+    58                                  SECTION .bss    
+    59                                      ; used to store names of players
+    60 00000000 <res 00000100>              name_player_x              resb    256 
+    61 00000100 <res 00000004>              name_player_x_len          resb    4
+    62 00000104 <res 00000100>              name_player_o              resb    256
+    63 00000204 <res 00000004>              name_player_o_len          resb    4 
+    64                                  
+    65                                      ; used to temporarily store the user input for the position of placement of the token
+    66 00000208 <res 0000000A>              placement_input            resb     10
+    67 00000212 <res 00000004>              placement_input_len        resb     4
+    68                                      
+    69                                      ;i cant remember where i used this one lol 
+    70 00000216 <res 0000000A>              read_len                resb    10
+    71                                  
+    72                                  SECTION .text
+    73                                  global      _start
+    74                                      
+    75                                  
+    76                                  _start:
+    77                                      ; Prompts the names of each player
+    78 00000000 E8AF020000                  call Prompt_Name_Player_X
+    79 00000005 E8F6020000                  call Prompt_Name_Player_O
+    80                                  
+    81                                      ; Print the board Initially
+    82 0000000A E8DA010000                  call Print_Board
+    83                                      ; Game Loop
+    84 0000000F E805000000                  call Game_Loop
+    85                                      
+    86 00000014 E9AC040000                  jmp Exit
+    87                                  
+    88                                  
+    89                                  %include './includes/GameLogic.asm'         ; Contains Logic regarding how game proceeds and implements the rules of the game
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 7, 2019
+     3                              <1> 
+     4                              <1> ; Basically handles the turns of each player until game reaches a conclusion
+     5                              <1> ; Also Checks if game has reached a conclusion
+     6                              <1> ; Input: None
+     7                              <1> ; Output: None
+     8                              <1> Game_Loop:
+     9                              <1> 
+    10                              <1>     ; prompt X for position where to place the token
+    11                              <1>     Call_Placement_Prompt_For_X:
+    12 00000019 E824030000          <1>         call Placement_Prompt_For_X
+    13                              <1>     
+    14                              <1>     ; If token placement fails reprompt else continue
+    15 0000001E 83F801              <1>     cmp eax, 1
+    16 00000021 75F6                <1>     jne Call_Placement_Prompt_For_X
+    17                              <1> 
+    18                              <1>     ; increment number of tokens placed in memory
+    19 00000023 A1[F4000000]        <1>     mov eax, [tokens_placed]
+    20 00000028 40                  <1>     inc eax
+    21 00000029 A3[F4000000]        <1>     mov [tokens_placed], eax
+    22                              <1> 
+    23                              <1> 
+    24                              <1>     ; Print the state of the board after X places its token
+    25 0000002E E8B6010000          <1>     call Print_Board
+    26                              <1>     ; check if game has reached a conclusion
+    27 00000033 E822000000          <1>     call Check_Board_For_Win_Or_Draw
+    28                              <1> 
+    29                              <1>     
+    30                              <1>     ; prompt O for position where to place the token
+    31                              <1>     Call_Placement_Prompt_For_O:
+    32 00000038 E824030000          <1>         call Placement_Prompt_For_O
+    33                              <1> 
+    34                              <1>     
+    35                              <1>     ; If token placement fails reprompt else continue
+    36 0000003D 83F801              <1>     cmp eax, 1 
+    37 00000040 75F6                <1>     jne Call_Placement_Prompt_For_O
+    38                              <1> 
+    39                              <1> 
+    40                              <1>     ; increment number of tokens placed in memory
+    41 00000042 A1[F4000000]        <1>     mov eax, [tokens_placed]
+    42 00000047 40                  <1>     inc eax
+    43 00000048 A3[F4000000]        <1>     mov [tokens_placed], eax
+    44                              <1> 
+    45 0000004D E897010000          <1>     call Print_Board
+    46                              <1>     
+    47                              <1>     ; check if game has reached a conclusion
+    48 00000052 E803000000          <1>     call Check_Board_For_Win_Or_Draw
+    49                              <1> 
+    50                              <1> 
+    51                              <1>     ; go to start of loop
+    52 00000057 EBC0                <1>     jmp Game_Loop
+    53                              <1> 
+    54                              <1> Game_Loop_Exit:
+    55 00000059 C3                  <1> ret
+    56                              <1> 
+    57                              <1> 
+    58                              <1> 
+    59                              <1> 
+    60                              <1> 
+    61                              <1> 
+    62                              <1> 
+    63                              <1> ; Checks if game has reached a conclustion i.e. X/O wins or there is a draw
+    64                              <1> ; If conclusion is reached it is printed on the screen and game terminates
+    65                              <1> ; Input: None
+    66                              <1> ; Output: None
+    67                              <1> 
+    68                              <1> Check_Board_For_Win_Or_Draw:
+    69 0000005A E821000000          <1>     call Check_All_Rows_For_Win             ;check all rows
+    70 0000005F E876000000          <1>     call Check_All_Cols_For_Win             ;check all columns
+    71 00000064 E8CB000000          <1>     call Check_Both_Diagonals_For_Win       ;check both diagonals
+    72 00000069 E801000000          <1>     call Check_Draw
+    73 0000006E C3                  <1>     ret
+    74                              <1> 
+    75                              <1> 
+    76                              <1> 
+    77                              <1> 
+    78                              <1> 
+    79                              <1> 
+    80                              <1> ; Checks if game has reached a drawn state
+    81                              <1> ; If game is drawn result is printed on screen and game terminates
+    82                              <1> ; Input: None
+    83                              <1> ; Output: None
+    84                              <1> Check_Draw: 
+    85 0000006F 0FB605[F4000000]    <1>     movzx eax, byte[tokens_placed]      ;get number of tokens placed on board so far
+    86 00000076 83F809              <1>     cmp eax, 9                          ;check if number of tokens placed on board so far = 9 
+    87 00000079 0F84CD030000        <1>     je Declare_Draw_And_Exit            ;if yes its a draw so print result and exit
+    88 0000007F C3                  <1>     ret
+    89                              <1> 
+    90                              <1> 
+    91                              <1> 
+    92                              <1> 
+    93                              <1> 
+    94                              <1> 
+    95                              <1> 
+    96                              <1> ; Inspects all rows to see if some player has won i.e. if there are 3 same symbols in a row
+    97                              <1> ; If any player wins result is printed on screen and game terminates
+    98                              <1> ; Input: None
+    99                              <1> ; Output: None
+   100                              <1> Check_All_Rows_For_Win:
+   101 00000080 B903000000          <1>     mov ecx, 3              ;intialize the counter
+   102                              <1> 
+   103                              <1>     ; loop through each row
+   104                              <1>     Board_Row_Loop:
+   105                              <1>         ; check row number ecx if it contains all x
+   106 00000085 51                  <1>         push ecx            
+   107 00000086 89CA                <1>         mov edx,ecx         
+   108 00000088 83EA01              <1>         sub edx, 1          ;set the edx(row no.) paramter for Row_Check (sub 1 because Row_Check row no start at 0)
+   109 0000008B BE[1A000000]        <1>         mov esi, x_symbol   ;set the esi(symbol to check) paramter for Row_Check    
+   110 00000090 E815000000          <1>         call Row_Check
+   111                              <1> 
+   112 00000095 59                  <1>         pop ecx
+   113 00000096 51                  <1>         push ecx
+   114                              <1> 
+   115                              <1>         ; check row number ecx if it contains all O
+   116 00000097 89CA                <1>         mov edx,ecx
+   117 00000099 83EA01              <1>         sub edx, 1          ;set the edx(row no.) paramter for Row_Check
+   118 0000009C BE[1B000000]        <1>         mov esi, o_symbol   ;set the esi(symbol to check) paramter for Row_Check    
+   119 000000A1 E804000000          <1>         call Row_Check
+   120 000000A6 59                  <1>         pop ecx
+   121 000000A7 E2DC                <1>     loop Board_Row_Loop
+   122 000000A9 C3                  <1>     ret
+   123                              <1> 
+   124                              <1> 
+   125                              <1> 
+   126                              <1> 
+   127                              <1> 
+   128                              <1> 
+   129                              <1> ; Checks each column in a row if all of them contains the symbol contained in ESI
+   130                              <1> ; If they do then the player with given symbol (passed in ESI) is declared the winner and game ends
+   131                              <1> ; Input: EDX=number of row to check (starting at 0)
+   132                              <1> ;        ESI=Character to check for
+   133                              <1> ; Output: None
+   134                              <1> Row_Check:
+   135                              <1>     ;loads the characeter into memory
+   136 000000AA 8A1E                <1>     mov bl,byte[esi]
+   137 000000AC B903000000          <1>     mov ecx, 3
+   138 000000B1 6BD203              <1>     imul edx, 3
+   139                              <1>     
+   140                              <1>     ; loop over each column in the row
+   141                              <1>     Row_Col_Check_Lo:
+   142 000000B4 51                  <1>         push ecx
+   143                              <1> 
+   144                              <1>         ;sets ecx = next box address in memory to check
+   145 000000B5 83E901              <1>         sub ecx,1
+   146 000000B8 01D1                <1>         add ecx, edx
+   147 000000BA 81C1[F5000000]      <1>         add ecx, board
+   148                              <1> 
+   149                              <1>         ; if current column being looped over doesnt contain the symbol
+   150                              <1>         ; no further scanning required as game would still be in progress
+   151                              <1>         ; so jump out of loop in that case
+   152 000000C0 3819                <1>         cmp byte[ecx], bl
+   153 000000C2 59                  <1>         pop ecx
+   154 000000C3 7514                <1>         jne Not_Match_Row
+   155                              <1> 
+   156                              <1> 
+   157 000000C5 E2ED                <1>     loop Row_Col_Check_Lo
+   158                              <1>     
+   159                              <1>     ; if loop finishes in entirety that means all columns of a row matched
+   160                              <1>     ; so declare the winner and terminate
+   161 000000C7 381D[1A000000]      <1>     cmp byte[x_symbol], bl
+   162 000000CD 0F8440030000        <1>     je Declare_Win_Player_X_And_Exit
+   163 000000D3 0F8558030000        <1>     jne Declare_Win_Player_Y_And_Exit
+   164                              <1>         
+   165                              <1> 
+   166                              <1>     Not_Match_Row:
+   167 000000D9 C3                  <1>     ret 
+   168                              <1> 
+   169                              <1> 
+   170                              <1> 
+   171                              <1> 
+   172                              <1> ; Inspects all Columns to see if some player has won i.e. if there are 3 same symbols in a row
+   173                              <1> ; If any player wins result is printed on screen and game terminates
+   174                              <1> ; Input: None
+   175                              <1> ; Output: None
+   176                              <1> Check_All_Cols_For_Win:
+   177 000000DA B903000000          <1>     mov ecx, 3
+   178                              <1>     ; loop over each column and check for win
+   179                              <1>     Board_Col_Loop:
+   180 000000DF 51                  <1>         push ecx
+   181                              <1>         
+   182 000000E0 89CA                <1>         mov edx,ecx
+   183 000000E2 83EA01              <1>         sub edx, 1          ;set the edx(row no.) paramter for Column_Check (sub 1 because Column_Check row no start at 0)
+   184 000000E5 BE[1A000000]        <1>         mov esi, x_symbol   ;set the esi(symbol to check) paramter for Column_Check    
+   185 000000EA E815000000          <1>         call Column_Check   ;check given column for all X
+   186                              <1> 
+   187 000000EF 59                  <1>         pop ecx
+   188 000000F0 51                  <1>         push ecx
+   189                              <1> 
+   190                              <1>         ;check given column for all O in a similar way
+   191 000000F1 89CA                <1>         mov edx,ecx
+   192 000000F3 83EA01              <1>         sub edx, 1
+   193 000000F6 BE[1B000000]        <1>         mov esi, o_symbol
+   194 000000FB E804000000          <1>         call Column_Check
+   195                              <1> 
+   196                              <1> 
+   197 00000100 59                  <1>         pop ecx
+   198 00000101 E2DC                <1>     loop Board_Col_Loop
+   199 00000103 C3                  <1>     ret
+   200                              <1> 
+   201                              <1> 
+   202                              <1> 
+   203                              <1> 
+   204                              <1> ; Checks given column in all rows if all of them contains the symbol contained in ESI
+   205                              <1> ; If they do then the player with given symbol (passed in ESI) is declared the winner and game ends
+   206                              <1> ; Input: EDX=number of column to check starting 0 
+   207                              <1> ;       ESI=Character to check for win
+   208                              <1> ; Output: None
+   209                              <1> Column_Check:
+   210                              <1>     ;loads the characeter into memory
+   211 00000104 8A1E                <1>     mov bl,byte[esi]
+   212 00000106 B903000000          <1>     mov ecx, 3 
+   213                              <1>     
+   214                              <1>     ; loop over the given column in all rows
+   215                              <1>     Col_Row_Check_Lo:
+   216 0000010B 51                  <1>         push ecx
+   217                              <1> 
+   218                              <1>         ;sets ecx = next box address in memory to check
+   219 0000010C 83E901              <1>         sub ecx,1
+   220 0000010F 6BC903              <1>         imul ecx, 3
+   221 00000112 01D1                <1>         add ecx, edx
+   222 00000114 81C1[F5000000]      <1>         add ecx, board
+   223                              <1> 
+   224                              <1> 
+   225                              <1>         ; if current row being looped over doesnt contain the symbol
+   226                              <1>         ; no further scanning required as game would still be in progress
+   227                              <1>         ; so jump out of loop in that case
+   228 0000011A 3819                <1>         cmp byte[ecx], bl
+   229 0000011C 59                  <1>         pop ecx
+   230 0000011D 7514                <1>         jne Not_Match_Col
+   231                              <1> 
+   232                              <1> 
+   233 0000011F E2EA                <1>     loop Col_Row_Check_Lo
+   234                              <1> 
+   235 00000121 381D[1A000000]      <1>     cmp byte[x_symbol], bl
+   236 00000127 0F84E6020000        <1>     je Declare_Win_Player_X_And_Exit
+   237 0000012D 0F85FE020000        <1>     jne Declare_Win_Player_Y_And_Exit
+   238                              <1> 
+   239                              <1> 
+   240                              <1>     Not_Match_Col:
+   241 00000133 C3                  <1>     ret 
+   242                              <1> 
+   243                              <1> 
+   244                              <1> 
+   245                              <1> 
+   246                              <1> 
+   247                              <1> ; Inspects both diagonals to see if some player has won i.e. if there are 3 same symbols in a diagonal
+   248                              <1> ; If any player wins result is printed on screen and game terminates
+   249                              <1> ; Input: None
+   250                              <1> ; Output: None
+   251                              <1> Check_Both_Diagonals_For_Win:
+   252 00000134 BE[1A000000]        <1>     mov esi, x_symbol
+   253 00000139 E81F000000          <1>     call Check_Diagonal_1
+   254 0000013E BE[1B000000]        <1>     mov esi, o_symbol
+   255 00000143 E815000000          <1>     call Check_Diagonal_1
+   256                              <1> 
+   257 00000148 BE[1A000000]        <1>     mov esi, x_symbol
+   258 0000014D E839000000          <1>     call Check_Diagonal_2
+   259 00000152 BE[1B000000]        <1>     mov esi, o_symbol
+   260 00000157 E82F000000          <1>     call Check_Diagonal_2
+   261 0000015C C3                  <1>     ret
+   262                              <1> 
+   263                              <1> 
+   264                              <1> 
+   265                              <1> 
+   266                              <1> 
+   267                              <1> 
+   268                              <1> ; Checks if all boxes in diagonal \ contains same symbol as contained in ESI
+   269                              <1> ; If they do then the player with given symbol (passed in ESI) is declared the winner and game ends
+   271                              <1> ; Diagonal 1 check ; Input: ESI=Symbol to Check for in the diagonal
+   272                              <1> ; Output: none
+   273                              <1> Check_Diagonal_1:
+   274                              <1>     ;loads the characeter into memory
+   275 0000015D 8A1E                <1>     mov bl,byte[esi]
+   276                              <1> 
+   277 0000015F B903000000          <1>     mov ecx, 3
+   278                              <1> 
+   279                              <1>     Diag_1_Check_Lo:
+   280 00000164 51                  <1>         push ecx
+   281                              <1>         ;sets ecx = next box address in memory to check
+   282 00000165 83E901              <1>         sub ecx, 1
+   283 00000168 6BC904              <1>         imul ecx, 4
+   284 0000016B 81C1[F5000000]      <1>         add ecx, board
+   285                              <1> 
+   286                              <1>         ; if current diagonal being looped over doesnt contain the symbol
+   287                              <1>         ; no further scanning required as game would still be in progress
+   288                              <1>         ; so jump out of loop in that case
+   289 00000171 3819                <1>         cmp byte[ecx], bl
+   290 00000173 59                  <1>         pop ecx
+   291 00000174 7514                <1>         jne No_Match_Diag_1
+   292                              <1>  
+   293                              <1> 
+   294 00000176 E2EC                <1>     loop Diag_1_Check_Lo
+   295                              <1>  
+   296                              <1>     ; if loop finishes in entirety that means the given diagonal all symbols matched
+   297                              <1>     ; so declare the winner and terminate
+   298 00000178 381D[1A000000]      <1>     cmp byte[x_symbol], bl
+   299 0000017E 0F848F020000        <1>     je Declare_Win_Player_X_And_Exit
+   300 00000184 0F85A7020000        <1>     jne Declare_Win_Player_Y_And_Exit
+   301                              <1> 
+   302                              <1>     No_Match_Diag_1:
+   303 0000018A C3                  <1>     ret
+   304                              <1> 
+   305                              <1> 
+   306                              <1> 
+   307                              <1> 
+   308                              <1> 
+   309                              <1> 
+   310                              <1> 
+   311                              <1> ; Checks if all boxes in diagonal / contains same symbol as contained in ESI
+   312                              <1> ; If they do then the player with given symbol (passed in ESI) is declared the winner and game ends
+   313                              <1> ; Input: ESI=Symbol to Check for in the diagonal
+   314                              <1> ; Output: none
+   315                              <1> Check_Diagonal_2:    
+   316                              <1> ;loads the characeter into memory
+   317                              <1> ; 3 2 1     6 4 2
+   318 0000018B 8A1E                <1>     mov bl,byte[esi]
+   319 0000018D B903000000          <1>     mov ecx, 3
+   320                              <1>     Diag_2_Check_Lo:
+   321 00000192 51                  <1>         push ecx
+   322                              <1>          
+   323                              <1>         ;sets ecx = next box address in memory to check
+   324 00000193 6BC902              <1>         imul ecx, 2 
+   325 00000196 81C1[F5000000]      <1>         add ecx, board
+   326                              <1> 
+   327                              <1>         ; if current diagonal being looped over doesnt contain the symbol
+   328                              <1>         ; no further scanning required as game would still be in progress
+   329                              <1>         ; so jump out of loop in that case
+   330 0000019C 3819                <1>         cmp byte[ecx], bl
+   331 0000019E 59                  <1>         pop ecx
+   332 0000019F 7514                <1>         jne No_Match_Diag_2
+   333                              <1>  
+   334 000001A1 E2EF                <1>     loop Diag_2_Check_Lo
+   335                              <1> 
+   336                              <1>     ; if loop finishes in entirety that means the given diagonal all symbols matched
+   337                              <1>     ; so declare the winner and terminate
+   338 000001A3 381D[1A000000]      <1>     cmp byte[x_symbol], bl
+   339 000001A9 0F8464020000        <1>     je Declare_Win_Player_X_And_Exit
+   340 000001AF 0F857C020000        <1>     jne Declare_Win_Player_Y_And_Exit
+   341                              <1> 
+   342                              <1>     No_Match_Diag_2:
+   343 000001B5 C3                  <1>     ret
+    90                                  %include './includes/Board.asm'             ; Contains Tic-Tac-Toe Board related functions e.g. print board, place a token on board etc.
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 7, 2019
+     3                              <1> 
+     4                              <1> ; Places the token on the board in memory
+     5                              <1> ; Input EAX=position to place the marker on
+     6                              <1> ; Input ESI=Marker to place 
+     7                              <1> ; Output EAX=1 if placement successful EAX=0 if it fails
+     8                              <1> Place_Token:
+     9                              <1> 
+    10                              <1>     ; find the position on the board
+    11 000001B6 8A16                <1>     mov dl,byte[esi]
+    12 000001B8 83E801              <1>     sub eax, 1  
+    13 000001BB B9[F5000000]        <1>     mov ecx, board
+    14 000001C0 01C1                <1>     add ecx, eax
+    15                              <1> 
+    16                              <1>     ; Check if the place is valid location to place token
+    17 000001C2 803939              <1>     cmp byte[ecx], '9'
+    18 000001C5 7F0D                <1>     jg Token_Placement_Error
+    19                              <1> 
+    20 000001C7 803930              <1>     cmp byte[ecx], '0'
+    21 000001CA 7C08                <1>     jl Token_Placement_Error
+    22                              <1> 
+    23                              <1>     ; Perform the placement
+    24 000001CC 8811                <1>     mov [ecx], dl
+    25                              <1> 
+    26 000001CE B801000000          <1>     mov eax, 1
+    27                              <1>     Placment_Attempt_Complete:
+    28 000001D3 C3                  <1>     ret
+    29                              <1> 
+    30                              <1> 
+    31                              <1> 
+    32                              <1> 
+    33                              <1> 
+    34                              <1> 
+    35                              <1> ; Prints the error message if user tries to place token in a occupied block
+    36                              <1> ; Input: none 
+    37                              <1> ; Output: none
+    38                              <1> Token_Placement_Error:
+    39 000001D4 B9[C0000000]        <1>     mov ecx, placement_error_txt
+    40 000001D9 BA34000000          <1>     mov edx, placement_error_txt_len
+    41 000001DE E88A020000          <1>     call Print
+    42 000001E3 B800000000          <1>     mov eax,0
+    43 000001E8 C3                  <1>     ret
+    44                              <1> 
+    45                              <1> 
+    46                              <1> 
+    47                              <1> 
+    48                              <1> 
+    49                              <1> 
+    50                              <1> ; Prints the Tic-Tac-Toe board in memory to the screen
+    51                              <1> ; Input: none 
+    52                              <1> ; Output: none
+    53                              <1> Print_Board:
+    54 000001E9 E86F020000          <1>     call Print_Empty_Line
+    55 000001EE E86A020000          <1>     call Print_Empty_Line
+    56 000001F3 B903000000          <1>     mov ecx, 3 
+    57                              <1>     row_lo:
+    58 000001F8 51                  <1>         push ecx
+    59                              <1>         
+    60 000001F9 B903000000          <1>         mov ecx, 3
+    61                              <1>         column_lo:
+    62 000001FE 58                  <1>             pop eax 
+    63 000001FF 50                  <1>             push eax
+    64                              <1> 
+    65 00000200 51                  <1>             push ecx 
+    66 00000201 83F801              <1>             cmp eax,1
+    67 00000204 7411                <1>             je Space_Print_Bef
+    68                              <1> 
+    69 00000206 B9[18000000]        <1>             mov ecx,  underscore_symbol
+    70 0000020B BA01000000          <1>             mov edx, 1
+    71 00000210 E858020000          <1>             call Print
+    72                              <1>             
+    73 00000215 EB0F                <1>             jmp Symbol_Print
+    74                              <1> 
+    75                              <1>             Space_Print_Bef:
+    76                              <1> 
+    77 00000217 B9[1C000000]        <1>                 mov ecx,  space 
+    78 0000021C BA01000000          <1>                 mov edx, 1
+    79 00000221 E847020000          <1>                 call Print 
+    80                              <1> 
+    81                              <1>             Symbol_Print:
+    82 00000226 59                  <1>             pop ecx ;col
+    83 00000227 BB03000000          <1>             mov ebx, 3
+    84 0000022C 29CB                <1>             sub ebx, ecx 
+    85                              <1>  
+    86 0000022E 58                  <1>             pop eax ;row 
+    87                              <1> 
+    88 0000022F 50                  <1>             push eax
+    89 00000230 51                  <1>             push ecx
+    90                              <1>  
+    91 00000231 B903000000          <1>             mov  ecx, 3
+    92 00000236 29C1                <1>             sub  ecx, eax
+    93 00000238 6BC903              <1>             imul ecx, 3
+    94 0000023B 01D9                <1>             add ecx, ebx
+    95 0000023D 89C8                <1>             mov eax, ecx  
+    96                              <1> 
+    97 0000023F B9[F5000000]        <1>             mov ecx,  board
+    98 00000244 01C1                <1>             add ecx, eax
+    99 00000246 BA01000000          <1>             mov edx, 1
+   100 0000024B E81D020000          <1>             call Print
+   101                              <1>             
+   102                              <1>             ; this fetches row number into eax
+   103 00000250 59                  <1>             pop ecx
+   104 00000251 58                  <1>             pop eax
+   105 00000252 50                  <1>             push eax
+   106 00000253 51                  <1>             push ecx
+   107                              <1> 
+   108 00000254 83F802              <1>             cmp eax, 2
+   109 00000257 7C11                <1>             jl Space_Print_After
+   110                              <1> 
+   111 00000259 B9[18000000]        <1>             mov ecx,  underscore_symbol
+   112 0000025E BA01000000          <1>             mov edx, 1
+   113 00000263 E805020000          <1>             call Print
+   114 00000268 EB0F                <1>             jmp Skip_Space_Afer
+   115                              <1> 
+   116                              <1>             Space_Print_After:
+   117                              <1> 
+   118 0000026A B9[1C000000]        <1>                 mov ecx,  space 
+   119 0000026F BA01000000          <1>                 mov edx, 1
+   120 00000274 E8F4010000          <1>                 call Print 
+   121                              <1> 
+   122                              <1> 
+   123                              <1>             Skip_Space_Afer:
+   124 00000279 59                  <1>             pop ecx
+   125 0000027A 83F901              <1>             cmp ecx,1
+   126 0000027D 51                  <1>             push ecx
+   127 0000027E 740F                <1>             je column_lo_end
+   128                              <1> 
+   129 00000280 B9[19000000]        <1>             mov ecx,  pipe_symbol
+   130 00000285 BA01000000          <1>             mov edx, 1
+   131 0000028A E8DE010000          <1>             call Print
+   132                              <1> 
+   133                              <1>             column_lo_end:
+   134 0000028F 59                  <1>             pop ecx
+   135                              <1>             
+   136 00000290 49                  <1>             dec ecx
+   137 00000291 0F8567FFFFFF        <1>             jnz column_lo
+   138                              <1>             ;loop column_lo
+   139                              <1> 
+   140 00000297 B9[BE000000]        <1>         mov ecx,  new_line_token
+   141 0000029C BA02000000          <1>         mov edx, new_line_token_len
+   142 000002A1 E8C7010000          <1>         call Print
+   143 000002A6 59                  <1>         pop ecx
+   144                              <1>         
+   145 000002A7 49                  <1>         dec ecx
+   146 000002A8 0F854AFFFFFF        <1>         jnz row_lo
+   147                              <1> 
+   148 000002AE E8AA010000          <1>     call Print_Empty_Line
+   149 000002B3 C3                  <1>     ret
+    91                                  %include './includes/Prompts.asm'           ; Contains functionality for prompts has logic for printing prompt to screen and getting user input
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 6, 2019
+     3                              <1> 
+     4                              <1> ; Input: none
+     5                              <1> ; Output: none
+     6                              <1> ; Prompts user and Reads the name of user X from the keyboard
+     7                              <1> Prompt_Name_Player_X:
+     8                              <1>     ;Prints the prompt for name for X
+     9 000002B4 E8A4010000          <1>     call Print_Empty_Line
+    10 000002B9 E89F010000          <1>     call Print_Empty_Line
+    11 000002BE B9[00000000]        <1>     mov ecx, player_name_prompt
+    12 000002C3 BA16000000          <1>     mov edx, player_name_prompt_len
+    13 000002C8 E8A0010000          <1>     call Print
+    14                              <1> 
+    15 000002CD B9[1A000000]        <1>     mov ecx, x_symbol
+    16 000002D2 BA01000000          <1>     mov edx, 1
+    17 000002D7 E891010000          <1>     call Print
+    18                              <1> 
+    19 000002DC B9[16000000]        <1>     mov ecx, colon
+    20 000002E1 BA02000000          <1>     mov edx, 2
+    21 000002E6 E882010000          <1>     call Print 
+    22                              <1> 
+    23                              <1>     ; read input from the keyboard
+    24 000002EB B9[00000000]        <1>     mov ecx, name_player_x 
+    25 000002F0 E885010000          <1>     call Read_Input
+    26 000002F5 A1[16020000]        <1>     mov  eax, [read_len]
+    27 000002FA A3[00010000]        <1>     mov  [name_player_x_len], eax  ; restore the length
+    28 000002FF C3                  <1>     ret
+    29                              <1> 
+    30                              <1> 
+    31                              <1> 
+    32                              <1> 
+    33                              <1> 
+    34                              <1> ; Input: none
+    35                              <1> ; Output: none
+    36                              <1> ; Prompts user and Reads the name of user O from the keyboard
+    37                              <1> Prompt_Name_Player_O:
+    38                              <1>     ;Prints the prompt for name for O
+    39 00000300 B9[00000000]        <1>     mov ecx, player_name_prompt
+    40 00000305 BA16000000          <1>     mov edx, player_name_prompt_len
+    41 0000030A E85E010000          <1>     call Print
+    42                              <1> 
+    43 0000030F B9[1B000000]        <1>     mov ecx, o_symbol
+    44 00000314 BA01000000          <1>     mov edx, 1
+    45 00000319 E84F010000          <1>     call Print
+    46                              <1> 
+    47 0000031E B9[16000000]        <1>     mov ecx, colon
+    48 00000323 BA02000000          <1>     mov edx, 2
+    49 00000328 E840010000          <1>     call Print 
+    50                              <1> 
+    51                              <1>     ; read input from the keyboard
+    52 0000032D B9[04010000]        <1>     mov ecx, name_player_o 
+    53 00000332 E843010000          <1>     call Read_Input
+    54 00000337 A1[16020000]        <1>     mov  eax, [read_len]
+    55 0000033C A3[04020000]        <1>     mov  [name_player_o_len], eax  ; restore the length
+    56 00000341 C3                  <1>     ret
+    57                              <1> 
+    58                              <1> 
+    59                              <1> 
+    60                              <1> 
+    61                              <1> 
+    62                              <1> ; Input: none
+    63                              <1> ; Output: none
+    64                              <1> ; Prompts user x for the position he/she wants to place token at and makes the placement on board in memory 
+    65                              <1> Placement_Prompt_For_X:
+    66                              <1>     ; Print prompt and get the input
+    67 00000342 E886000000          <1>     call Print_Name_Player_X
+    68 00000347 E834000000          <1>     call Generic_Placement_Prompt
+    69                              <1> 
+    70                              <1>     ; convert read position to 1 digit int
+    71 0000034C BE[08020000]        <1>     mov esi, placement_input    ; pass original string as parameter
+    72 00000351 E869010000          <1>     call Read_Int_In_First_Char ; convert the user input to integer to pass in into the Place_Token via EAX
+    73                              <1> 
+    74                              <1> 
+    75                              <1>     ; make placement
+    76 00000356 BE[1A000000]        <1>     mov esi, x_symbol
+    77 0000035B E856FEFFFF          <1>     call Place_Token 
+    78                              <1> 
+    79 00000360 C3                  <1>     ret
+    80                              <1>     
+    81                              <1> 
+    82                              <1> 
+    83                              <1> 
+    84                              <1> 
+    85                              <1> ; Input: none
+    86                              <1> ; Output: none
+    87                              <1> ; Prompts user o for the position he/she wants to place token at and makes the placement on board in memory 
+    88                              <1> Placement_Prompt_For_O:
+    89                              <1>     ; Print prompt and get the input
+    90 00000361 E88A000000          <1>     call Print_Name_Player_O
+    91 00000366 E815000000          <1>     call Generic_Placement_Prompt
+    92                              <1> 
+    93 0000036B BE[08020000]        <1>     mov esi, placement_input 
+    94 00000370 E84A010000          <1>     call Read_Int_In_First_Char ; convert the user input to integer to pass in into the Place_Token via EAX
+    95                              <1> 
+    96                              <1>     ; make placement
+    97                              <1> 
+    98 00000375 BE[1B000000]        <1>     mov esi, o_symbol
+    99 0000037A E837FEFFFF          <1>     call Place_Token
+   100                              <1> 
+   101 0000037F C3                  <1>     ret
+   102                              <1> 
+   103                              <1> 
+   104                              <1> 
+   105                              <1> 
+   106                              <1> 
+   107                              <1> ; Input: none
+   108                              <1> ; Output: none
+   109                              <1> ; Displays a common message used by Placement_Prompt_For_O and Placement_Prompt_For_X
+   110                              <1> ; Reads the raw user input that is further used by  Placement_Prompt_For_O and Placement_Prompt_For_X
+   111                              <1> Generic_Placement_Prompt:
+   112 00000380 B9[25000000]        <1>     mov ecx, turn_prompt_text
+   113 00000385 BA3D000000          <1>     mov edx, turn_prompt_text_len
+   114 0000038A E8DE000000          <1>     call Print
+   115                              <1>  
+   116                              <1>     ; read input from the keyboard
+   117 0000038F B9[08020000]        <1>     mov ecx, placement_input 
+   118 00000394 E8E1000000          <1>     call Read_Input
+   119 00000399 A1[16020000]        <1>     mov  eax, [read_len]
+   120 0000039E A3[12020000]        <1>     mov  [placement_input_len], eax  ; restore the length
+   121 000003A3 C3                  <1>     ret
+    92                                  %include './includes/Prints.asm'            ; Contains common Print related function for e.g. to Print name of players, print game status etc.
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 6, 2019
+     3                              <1> 
+     4                              <1> ; Input: none
+     5                              <1> ; Output: none
+     6                              <1> ; Prints the game header
+     7                              <1> Print_Game_Header:
+     8 000003A4 E824000000          <1>     call Print_Name_Player_X
+     9                              <1> 
+    10 000003A9 B9[B9000000]        <1>     mov ecx, vs_text
+    11 000003AE BA05000000          <1>     mov edx, vs_text_len
+    12 000003B3 E8B5000000          <1>     call Print
+    13                              <1> 
+    14 000003B8 E833000000          <1>     call Print_Name_Player_O
+    15                              <1> 
+    16 000003BD B9[BE000000]        <1>     mov ecx, new_line_token
+    17 000003C2 BA02000000          <1>     mov edx, new_line_token_len
+    18 000003C7 E8A1000000          <1>     call Print
+    19 000003CC C3                  <1>     ret
+    20                              <1> 
+    21                              <1> 
+    22                              <1> 
+    23                              <1> 
+    24                              <1> ; Input: none
+    25                              <1> ; Output: none
+    26                              <1> ; Prints the name of Player X
+    27                              <1> Print_Name_Player_X:
+    28 000003CD B9[00000000]        <1>     mov ecx, name_player_x
+    29 000003D2 8B15[00010000]      <1>     mov edx, [name_player_x_len]
+    30 000003D8 83EA01              <1>     sub edx, 1                  ; to remove newline
+    31 000003DB E88D000000          <1>     call Print
+    32                              <1> 
+    33 000003E0 B9[1D000000]        <1>     mov ecx, x_symbol_braced 
+    34 000003E5 BA04000000          <1>     mov edx, x_symbol_braced_len
+    35 000003EA E87E000000          <1>     call Print
+    36                              <1> 
+    37 000003EF C3                  <1>     ret
+    38                              <1> 
+    39                              <1> 
+    40                              <1> ; Input: none
+    41                              <1> ; Output: none
+    42                              <1> ; Prints the name of Player O
+    43                              <1> Print_Name_Player_O:
+    44 000003F0 B9[04010000]        <1>     mov ecx, name_player_o
+    45 000003F5 8B15[04020000]      <1>     mov edx, [name_player_o_len]
+    46 000003FB 83EA01              <1>     sub edx, 1                  ; to remove newline
+    47 000003FE E86A000000          <1>     call Print
+    48                              <1>     
+    49 00000403 B9[21000000]        <1>     mov ecx, o_symbol_braced 
+    50 00000408 BA04000000          <1>     mov edx, o_symbol_braced_len
+    51 0000040D E85B000000          <1>     call Print
+    52                              <1> 
+    53 00000412 C3                  <1>     ret
+    54                              <1> 
+    55                              <1> 
+    56                              <1> 
+    57                              <1> ; Input: none
+    58                              <1> ; Output: none
+    59                              <1> ; Prints message stating that Player X won and exits the game
+    60                              <1> 
+    61                              <1> Declare_Win_Player_X_And_Exit:
+    62 00000413 E845000000          <1>     call Print_Empty_Line
+    63                              <1>     
+    64 00000418 E8B0FFFFFF          <1>     call Print_Name_Player_X
+    65                              <1> 
+    66 0000041D B9[62000000]        <1>     mov ecx, winner_dec_text
+    67 00000422 BA2E000000          <1>     mov edx, winner_dec_text_len
+    68 00000427 E841000000          <1>     call Print
+    69 0000042C E994000000          <1>     jmp Exit
+    70                              <1> 
+    71                              <1> 
+    72                              <1> 
+    73                              <1> ; Input: none
+    74                              <1> ; Output: none
+    75                              <1> ; Prints message stating that Player Y won and exits the game
+    76                              <1> Declare_Win_Player_Y_And_Exit:
+    77 00000431 E827000000          <1>     call Print_Empty_Line
+    78                              <1> 
+    79 00000436 E8B5FFFFFF          <1>     call Print_Name_Player_O
+    80                              <1>     
+    81 0000043B B9[62000000]        <1>     mov ecx, winner_dec_text
+    82 00000440 BA2E000000          <1>     mov edx, winner_dec_text_len
+    83 00000445 E823000000          <1>     call Print
+    84 0000044A EB79                <1>     jmp Exit
+    85                              <1> 
+    86                              <1> 
+    87                              <1> 
+    88                              <1> ; Input: none
+    89                              <1> ; Output: none
+    90                              <1> ; Prints message stating that draw occured and exits the game
+    91                              <1> Declare_Draw_And_Exit:
+    92 0000044C B9[90000000]        <1>     mov ecx, draw_text
+    93 00000451 BA29000000          <1>     mov edx, draw_text_len
+    94 00000456 E812000000          <1>     call Print
+    95 0000045B EB68                <1>     jmp Exit
+    96                              <1> 
+    97                              <1> 
+    98                              <1> 
+    99                              <1> ; Input: none
+   100                              <1> ; Output: none
+   101                              <1> ; Prints an empty line
+   102                              <1> 
+   103                              <1> Print_Empty_Line:
+   104 0000045D B9[BE000000]        <1>     mov ecx, new_line_token
+   105 00000462 BA02000000          <1>     mov edx, new_line_token_len
+   106 00000467 E801000000          <1>     call Print 
+   107 0000046C C3                  <1>     ret
+    93                                  %include './includes/BasicIO.asm'           ; Basic I/O related code i.e. code for print and read operations
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 6, 2019
+     3                              <1> 
+     4                              <1> ; Prints the text to the screen
+     5                              <1> ; Input:
+     6                              <1> ;   ecx=memory reference to the text
+     7                              <1> ;   edx=length of the text to Print
+     8                              <1> ; Output:
+     9                              <1> ;   none
+    10                              <1> Print:
+    11 0000046D B804000000          <1>     mov     eax, 4          ;syswrite
+    12 00000472 BB01000000          <1>     mov     ebx, 1          ;stdout 1 | stderr 3
+    13 00000477 CD80                <1>     int     80H 
+    14 00000479 C3                  <1>     ret
+    15                              <1> 
+    16                              <1> 
+    17                              <1> ; Reads the keyboard input into a buffer
+    18                              <1> ; Input
+    19                              <1> ;   ecx = input buffer
+    20                              <1> ; Output:
+    21                              <1> ;   buffer = string read into the buffer referenced by ecx
+    22                              <1> ;   eax = length of the string read
+    23                              <1> Read_Input:
+    24 0000047A B803000000          <1>     mov     eax, 3          ;sysread
+    25 0000047F BB00000000          <1>     mov     ebx, 0          ;stdin
+    26 00000484 BA32000000          <1>     mov     edx, 50
+    27 00000489 CD80                <1>     int     80H
+    28 0000048B A3[16020000]        <1>     mov     [read_len], eax
+    29 00000490 C3                  <1>     ret 
+    94                                  %include './includes/Utils.asm'             ; Additional utility code
+     1                              <1> ; Author:   Arsh Sekhon
+     2                              <1> ; Date:     March 6, 2019
+     3                              <1> 
+     4                              <1> ;https://stackoverflow.com/a/19312503
+     5                              <1> STRING_TERMINATOR equ 0
+     6                              <1> 
+     7                              <1> ; Converts and string to an integer 
+     8                              <1> ; Input:
+     9                              <1> ; ESI = pointer to the string to convert
+    10                              <1> ; ECX = number of digits in the string (must be > 0)
+    11                              <1> ; Output:
+    12                              <1> ; EAX = integer value
+    13                              <1> String_To_Integer:
+    14 00000491 31DB                <1>   xor ebx,ebx    ; clear ebx
+    15                              <1> .next_digit:
+    16 00000493 0FB606              <1>   movzx eax,byte[esi]
+    17 00000496 46                  <1>   inc esi
+    18 00000497 2C30                <1>   sub al,'0'    ; convert from ASCII to number
+    19 00000499 6BDB0A              <1>   imul ebx,10
+    20 0000049C 01C3                <1>   add ebx,eax   ; ebx = ebx*10 + eax
+    21 0000049E E2F3                <1>   loop .next_digit  ; while (--ecx)
+    22 000004A0 89D8                <1>   mov eax,ebx
+    23 000004A2 C3                  <1>   ret
+    24                              <1> 
+    25                              <1> ; Converts and integer to a string 
+    26                              <1> ; Input:  EAX = integer value to convert
+    27                              <1> ;         ESI = pointer to buffer to store the string in (must have room for at least 10 bytes)
+    28                              <1> ;
+    29                              <1> ; Output: EAX = pointer to the first character of the generated string
+    30                              <1> Integer_To_String:
+    31 000004A3 83C609              <1>   add esi,9
+    32 000004A6 C60600              <1>   mov byte [esi],STRING_TERMINATOR
+    33                              <1> 
+    34 000004A9 BB0A000000          <1>   mov ebx,10         
+    35                              <1> .next_digit:
+    36 000004AE 31D2                <1>   xor edx,edx         ; Clear edx prior to dividing edx:eax by ebx
+    37 000004B0 F7F3                <1>   div ebx             ; eax /= 10
+    38 000004B2 80C230              <1>   add dl,'0'          ; Convert the remainder to ASCII 
+    39 000004B5 4E                  <1>   dec esi             ; store characters in reverse order
+    40 000004B6 8816                <1>   mov [esi],dl
+    41 000004B8 85C0                <1>   test eax,eax            
+    42 000004BA 75F2                <1>   jnz .next_digit     ; Repeat until eax==0
+    43 000004BC 89F0                <1>   mov eax,esi
+    44 000004BE C3                  <1>   ret
+    45                              <1> 
+    46                              <1> ; Reads in the first character of string as an integer
+    47                              <1> ; Input:
+    48                              <1> ;   ESI = pointer to string to read
+    49                              <1> ; Output:
+    50                              <1> ;   EAX = integer value
+    51                              <1> Read_Int_In_First_Char: 
+    52 000004BF 0FB606              <1>   movzx eax,byte[esi] 
+    53 000004C2 2C30                <1>   sub al,'0'     
+    54 000004C4 C3                  <1>   ret
+    95                                  
+    96                                  Exit:  
+    97 000004C5 B801000000                  mov     eax, 1          ;sysexit
+    98 000004CA 31DB                        xor     ebx, ebx
+    99 000004CC CD80                        int     80H
