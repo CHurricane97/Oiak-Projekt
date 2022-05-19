@@ -26,6 +26,13 @@ section .data
     new_line                db      0xA, 0xD
     new_line_len            equ     $-new_line
 
+    ;Symbole uzywane przez funkcje zapisujaca jaki ruch wykonal uzytkownik
+    x_symbol                db     "X"
+    o_symbol                db     "O"
+
+    ;Tablica do gry
+    board                   db      "1","2","3","4","5","6","7","8","9"
+
 
 SECTION .bss
     ;Przechowuje odczyt wyboru po komunikacie powitalnym
@@ -64,6 +71,11 @@ Play_With_User:
     call Get_Choice
     cmp eax, 0
     je Exit
+
+    ;Funkcja nad ktora pracujemy
+    mov esi, x_symbol
+    call Place_Token
+
     call Set_X_Move
     call Check_Result
 
@@ -126,6 +138,32 @@ Set_O_Move:
 ;Funkcja sprawdzajaca wynik
 Check_Result:
 
+    ret
+
+; Places the token on the board in memory
+; Input EAX=position to place the marker on
+; Input ESI=Marker to place 
+; Output EAX=1 if placement successful EAX=0 if it fails
+Place_Token:
+
+    ; find the position on the board
+    mov dl,byte[esi]
+    sub eax, 1  
+    mov ecx, board
+    add ecx, eax
+
+    ; Check if the place is valid location to place token
+    cmp byte[ecx], '9'
+    jg Token_Placement_Error
+
+    cmp byte[ecx], '0'
+    jl Token_Placement_Error
+
+    ; Perform the placement
+    mov [ecx], dl
+
+    mov eax, 1
+    Placment_Attempt_Complete:
     ret
 
 ;Funkcja pobierajaca wybor z klawiatury
