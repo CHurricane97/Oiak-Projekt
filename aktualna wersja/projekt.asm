@@ -34,6 +34,12 @@ section .data
     board                   db      "1","2","3","4","5","6","7","8","9"
 
 
+    ;Dane powiazane z wyswietlaniem tablicy
+    underscore_symbol       db     "_"
+    space                   db     " "
+    pipe_symbol             db     "|"
+
+
 SECTION .bss
     ;Przechowuje odczyt wyboru po komunikacie powitalnym
     choice         resb    256 
@@ -72,12 +78,10 @@ Play_With_User:
     cmp eax, 0
     je Exit
 
-    ;Funkcja nad ktora pracujemy
+    ;Wstawianie krzyzyka do tablicy
     mov esi, x_symbol
-    call Place_Token
+    call Set_Sign_O_X
 
-    call Set_X_Move
-    call Check_Result
 
     ;Obsluga kolek
     call Display_Game_Board
@@ -85,8 +89,10 @@ Play_With_User:
     call Get_Choice
     cmp eax, 0
     je Exit
-    call Set_O_Move
-    call Check_Result
+
+     ;Wstawianie kolka do tablicy do tablicy
+    mov esi, o_symbol
+    call Set_Sign_O_X
 
     jmp User_Menu_Loop
 
@@ -140,30 +146,121 @@ Check_Result:
 
     ret
 
-; Places the token on the board in memory
-; Input EAX=position to place the marker on
-; Input ESI=Marker to place 
-; Output EAX=1 if placement successful EAX=0 if it fails
-Place_Token:
 
-    ; find the position on the board
+
+; Funkcja wyswietla plansze do gry z aktualnymi wartosciami
+Display_Game_Board:
+    call Enter_New_Line
+    call Enter_New_Line
+    call Enter_New_Line
+    mov ecx, 3 
+    row_lo:
+        push ecx
+        
+        mov ecx, 3
+        column_lo:
+            pop eax 
+            push eax
+
+            push ecx 
+            cmp eax,1
+            je Space_Print_Bef
+
+            mov ecx,  underscore_symbol
+            mov edx, 1
+            call Print
+            
+            jmp Symbol_Print
+
+            Space_Print_Bef:
+
+                mov ecx,  space 
+                mov edx, 1
+                call Print 
+
+            Symbol_Print:
+            pop ecx ;col
+            mov ebx, 3
+            sub ebx, ecx 
+ 
+            pop eax ;row 
+
+            push eax
+            push ecx
+ 
+            mov  ecx, 3
+            sub  ecx, eax
+            imul ecx, 3
+            add ecx, ebx
+            mov eax, ecx  
+
+            mov ecx,  board
+            add ecx, eax
+            mov edx, 1
+            call Print
+            
+            ; this fetches row number into eax
+            pop ecx
+            pop eax
+            push eax
+            push ecx
+
+            cmp eax, 2
+            jl Space_Print_After
+
+            mov ecx,  underscore_symbol
+            mov edx, 1
+            call Print
+            jmp Skip_Space_Afer
+
+            Space_Print_After:
+
+                mov ecx,  space 
+                mov edx, 1
+                call Print 
+
+
+            Skip_Space_Afer:
+            pop ecx
+            cmp ecx,1
+            push ecx
+            je column_lo_end
+
+            mov ecx,  pipe_symbol
+            mov edx, 1
+            call Print
+
+            column_lo_end:
+            pop ecx
+            
+            dec ecx
+            jnz column_lo
+            ;loop column_lo
+
+        mov ecx,  new_line
+        mov edx, new_line_len
+        call Print
+        pop ecx
+        
+        dec ecx
+        jnz row_lo
+
+    call Enter_New_Line
+    ret
+
+
+;Funkcja ustawia kolko lub krzyzyk na odpowiedniej pozycji w tablicy
+;W rejestrze eax podajemy miejsce w ktorym chcemy wstawic znak a w rejestrze esi znak ktory chcemy wstawic
+Set_Sign_O_X:
+
+    ;Znajdowanie pozycji na tablicy
     mov dl,byte[esi]
     sub eax, 1  
     mov ecx, board
     add ecx, eax
 
-    ; Check if the place is valid location to place token
-    cmp byte[ecx], '9'
-    jg Token_Placement_Error
-
-    cmp byte[ecx], '0'
-    jl Token_Placement_Error
-
-    ; Perform the placement
+    ;Wstawienie wartosci do tablicy
     mov [ecx], dl
-
-    mov eax, 1
-    Placment_Attempt_Complete:
     ret
 
 ;Funkcja pobierajaca wybor z klawiatury
@@ -171,7 +268,7 @@ Get_Choice:
     mov ecx, choice
     call Read
     mov  eax, [read_len]
-    mov  [choice_len], eax  ; restore the length
+    mov  [choice_len], eax
 
     ;Tutaj nastepuje konwersja wprowadzonej litery do cyfry
     mov esi,  choice
@@ -197,7 +294,7 @@ Display_Welcome_Message:
     mov     ecx, welcome_message 
     mov     edx, welcome_message_len 
     call    Print
-    call Print_Empty_Line
+    call Enter_New_Line
     mov     ecx, selection_message
     mov     edx, selection_message_len 
     call    Print
@@ -208,7 +305,7 @@ Display_Info_User:
     mov     ecx, info_user_message 
     mov     edx, info_user_message_len 
     call    Print
-    call Print_Empty_Line
+    call Enter_New_Line
     ret
 
 ;Funkcja wyswietlajaca komunikat powitalny po wybraniu gry z z komputerem
@@ -216,11 +313,11 @@ Display_Info_PC:
     mov     ecx, info_pc_message 
     mov     edx, info_pc_message_len 
     call    Print
-    call Print_Empty_Line
+    call Enter_New_Line
     ret
 
-;Funkcja przechodzaca do nowej lini
-Print_Empty_Line:
+;Funkcja przechodzaca do nowej lini Enter_New_Lin:
+Enter_New_Line:
     mov     ecx, new_line
     mov     edx, new_line_len
     call    Print
@@ -246,9 +343,4 @@ Read:
 Convert_Char_To_Int: 
     movzx   eax, byte[esi] 
     sub     al, '0'     
-    ret
-
-;Funkcja wyswietla tablice gry
-Display_Game_Board:
-
     ret
