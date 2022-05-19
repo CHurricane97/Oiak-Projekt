@@ -31,13 +31,16 @@ section .data
     o_symbol                db     "O"
 
     ;Tablica do gry
-    board                   db      "1","2","3","4","5","6","7","8","9"
+    game_board              db      "1","2","3","4","5","6","7","8","9"
 
 
     ;Dane powiazane z wyswietlaniem tablicy
-    underscore_symbol       db     "_"
-    space                   db     " "
+    floor_symbol            db     "_"
+    space_symbol            db     " "
     pipe_symbol             db     "|"
+
+
+    question_symbol         db     "?"
 
 
 SECTION .bss
@@ -72,7 +75,7 @@ Play_With_User:
     User_Menu_Loop:
 
     ;Obsluga krzyzykow
-    call Display_Game_Board
+    call Display_Game_game_board
     call Display_X_Selection
     call Get_Choice
     cmp eax, 0
@@ -84,7 +87,7 @@ Play_With_User:
 
 
     ;Obsluga kolek
-    call Display_Game_Board
+    call Display_Game_game_board
     call Display_O_Selection
     call Get_Choice
     cmp eax, 0
@@ -101,17 +104,17 @@ Play_With_PC:
     PC_Menu_Loop:
 
     ;Obsluga uzytkownika
-    call Display_Game_Board
+    call Display_Game_game_board
     call Display_X_Selection
     call Get_Choice
     cmp eax, 0
     je Exit
-    call Set_X_Move
+    
     call Check_Result
 
     ;Obsluga komputera
     call Get_PC_Move
-    call Set_O_Move
+   
     call Check_Result
 
     jmp PC_Menu_Loop
@@ -131,16 +134,6 @@ Get_PC_Move:
 
     ret
 
-;Funkcja ustawiajaca ruch krzyzykow
-Set_X_Move:
-
-    ret
-
-;Funkcja ustawiajaca ruch kolek
-Set_O_Move:
-
-    ret
-
 ;Funkcja sprawdzajaca wynik
 Check_Result:
 
@@ -149,34 +142,40 @@ Check_Result:
 
 
 ; Funkcja wyswietla plansze do gry z aktualnymi wartosciami
-Display_Game_Board:
+Display_Game_game_board:
+    ;Trzy razy przechodzimy do nowej linii
     call Enter_New_Line
     call Enter_New_Line
     call Enter_New_Line
+    ;Ustawienie licznika wierszy (posluzy nam za niego rejestr ecx)
     mov ecx, 3 
-    row_lo:
+    Print_Row_Loop:
+        ;Przerzucamy licznik na stos, aby go nie zniszczyć
         push ecx
         
+        ;Ustawienie licznika kolumn (posluzy nam za niego rejestr ecx)
         mov ecx, 3
-        column_lo:
-            pop eax 
-            push eax
+        Print_Column_Loop:
 
+            ;Przerzucamy licznik na stos, aby go nie zniszczyć
             push ecx 
-            cmp eax,1
-            je Space_Print_Bef
 
-            mov ecx,  underscore_symbol
-            mov edx, 1
-            call Print
+
+            ;cmp eax, 1
+            ;je Space_Before
             
-            jmp Symbol_Print
+            ;printowanie pierwszej podłogi w każdym wierszu
+            ;mov ecx,  floor_symbol
+            ;mov edx, 1
+            ;call Print
+            
+            ;jmp Symbol_Print
 
-            Space_Print_Bef:
+            ;Space_Before:
 
-                mov ecx,  space 
-                mov edx, 1
-                call Print 
+                ;mov ecx,  question_symbol
+                ;mov edx, 1
+                ;call Print 
 
             Symbol_Print:
             pop ecx ;col
@@ -194,7 +193,7 @@ Display_Game_Board:
             add ecx, ebx
             mov eax, ecx  
 
-            mov ecx,  board
+            mov ecx,  game_board
             add ecx, eax
             mov edx, 1
             call Print
@@ -205,46 +204,49 @@ Display_Game_Board:
             push eax
             push ecx
 
-            cmp eax, 2
-            jl Space_Print_After
+            ;cmp eax, 2
+            ;jl Space_Print_After
 
-            mov ecx,  underscore_symbol
-            mov edx, 1
-            call Print
-            jmp Skip_Space_Afer
+            ;mov ecx,  floor_symbol
+            ;mov edx, 1
+            ;call Print
+            ;jmp Skip_Space_Afer
 
-            Space_Print_After:
-
-                mov ecx,  space 
-                mov edx, 1
-                call Print 
+            ;Space_Print_After:
+                ;spacje w ostatniej linijce
+                ;mov ecx,  space_symbol 
+                ;mov edx, 1
+                ;call Print 
 
 
             Skip_Space_Afer:
             pop ecx
-            cmp ecx,1
+            cmp ecx, 1
             push ecx
-            je column_lo_end
+            je Print_Column_Loop_end
 
             mov ecx,  pipe_symbol
             mov edx, 1
             call Print
 
-            column_lo_end:
+            Print_Column_Loop_end:
             pop ecx
             
             dec ecx
-            jnz column_lo
-            ;loop column_lo
+            jnz Print_Column_Loop
 
-        mov ecx,  new_line
-        mov edx, new_line_len
-        call Print
-        pop ecx
+        ;Przechodzimy do nowej linii.
+        call Enter_New_Line
         
+        ;Zdejmujemy licznik petli ze stosu
+        pop ecx
+        ;Dekrementacja licznika petli dla wierszy
         dec ecx
-        jnz row_lo
+        jnz Print_Row_Loop
 
+    ;Trzy razy przechodzimy do nowej linii
+    call Enter_New_Line
+    call Enter_New_Line
     call Enter_New_Line
     ret
 
@@ -256,7 +258,7 @@ Set_Sign_O_X:
     ;Znajdowanie pozycji na tablicy
     mov dl,byte[esi]
     sub eax, 1  
-    mov ecx, board
+    mov ecx, game_board
     add ecx, eax
 
     ;Wstawienie wartosci do tablicy
