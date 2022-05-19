@@ -1,0 +1,50 @@
+EXIT_NR  = 1
+READ_NR  = 3
+WRITE_NR = 4
+
+STDOUT = 1
+STDIN = 0
+EXIT_CODE_SUCCESS = 0
+B_SIZE=180
+
+
+.data
+BUF: .space B_SIZE
+
+.text
+.globl _start
+_start:
+
+mov $READ_NR, %eax
+mov $STDIN, %ebx
+mov $BUF, %ecx
+mov $B_SIZE, %edx
+int $0x80
+
+xorl %esi,%esi
+petla:
+movb BUF(%esi),%al
+cmpb $'\n',%al
+je out
+cmpb $96,%al
+jle inkrementacja
+cmpb $123,%al
+jge inkrementacja
+subb $32,%al
+
+inkrementacja:
+movb %al,BUF(%esi)
+inc %esi
+jmp petla
+
+out:
+mov $WRITE_NR, %eax
+mov $STDOUT  , %ebx
+mov $BUF, %ecx
+mov $B_SIZE  , %edx
+int $0x80
+
+
+mov $EXIT_NR          , %eax
+mov $EXIT_CODE_SUCCESS, %ebx
+int $0x80
