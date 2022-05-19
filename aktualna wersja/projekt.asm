@@ -143,6 +143,8 @@ Check_Result:
 
 ; Funkcja wyswietla plansze do gry z aktualnymi wartosciami
 Display_Game_game_board:
+    push esi
+    mov esi, 0
     ;Trzy razy przechodzimy do nowej linii
     call Enter_New_Line
     call Enter_New_Line
@@ -156,33 +158,17 @@ Display_Game_game_board:
         ;Ustawienie licznika kolumn (posluzy nam za niego rejestr ecx)
         mov ecx, 3
         Print_Column_Loop:
-
             ;Przerzucamy licznik na stos, aby go nie zniszczyć
             push ecx 
 
-            Symbol_Print:
-            pop ecx ;col
-            mov ebx, 3
-            sub ebx, ecx 
- 
-            pop eax ;row 
-
-            push eax
-            push ecx
- 
-            mov  ecx, 3
-            sub  ecx, eax
-            imul ecx, 3
-            add ecx, ebx
-            mov eax, ecx  
-
-            ;Wyswietlanie symbolu
+            ;Wyswietlanie symbolu z tablicy
             mov ecx,  game_board
-            add ecx, eax
+            add ecx, esi ;Przesuniecie tablicy gry o odpowiednia wartosc
             mov edx, 1 ;dlugosc znaku
             call Print
-            
 
+            ;Zwiekszenie licznika tablicy
+            inc esi
             
 
             ;Przyworcenie ze stosu licznika petli dla kolumny i dekrementacja
@@ -203,6 +189,8 @@ Display_Game_game_board:
     call Enter_New_Line
     call Enter_New_Line
     call Enter_New_Line
+
+    pop esi
     ret
 
 

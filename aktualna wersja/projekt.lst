@@ -1,0 +1,341 @@
+     1                                  section .data
+     2                                      ;Dane funkcji wyswietlajacej komunikat powitalny
+     3 00000000 576974616A20772070-         welcome_message         db      "Witaj w programie kolko i krzyzk! ", 0
+     3 00000009 726F6772616D696520-
+     3 00000012 6B6F6C6B6F2069206B-
+     3 0000001B 727A797A6B212000   
+     4                                      welcome_message_len     equ     $-welcome_message
+     5                                  
+     6 00000023 5779626965727A2063-         selection_message       db      "Wybierz czy chcesz: [0] wyjsc, [1] grac z komputerem, [2] czy z drugim uzytkownikiem: ", 0
+     6 0000002C 7A792063686365737A-
+     6 00000035 3A205B305D2077796A-
+     6 0000003E 73632C205B315D2067-
+     6 00000047 726163207A206B6F6D-
+     6 00000050 7075746572656D2C20-
+     6 00000059 5B325D20637A79207A-
+     6 00000062 2064727567696D2075-
+     6 0000006B 7A79746B6F776E696B-
+     6 00000074 69656D3A2000       
+     7                                      selection_message_len   equ     $-selection_message
+     8                                  
+     9                                      ;Dane do funkcji wyswietlajacej komunikat po wybraniu gry z komputerem uzytkownikiem 
+    10 0000007A 57796272616C657320-         info_pc_message         db      "Wybrales gre z komputerem, wykonaj swoj ruch! Aby wyjsc wybierz [0]", 0
+    10 00000083 677265207A206B6F6D-
+    10 0000008C 7075746572656D2C20-
+    10 00000095 77796B6F6E616A2073-
+    10 0000009E 776F6A207275636821-
+    10 000000A7 204162792077796A73-
+    10 000000B0 63207779626965727A-
+    10 000000B9 205B305D00         
+    11                                      info_pc_message_len     equ     $-info_pc_message
+    12                                  
+    13                                      ;Dane do funkcji wyswietlajacej komunikat po wybraniu gry z komputerem uzytkownikiem
+    14 000000BE 57796272616C657320-         info_user_message       db      "Wybrales gre z drugim uzytkownikiem. Krzyzyki pierwsze wykonuja ruch! Aby wyjsc wybierz [0]", 0
+    14 000000C7 677265207A20647275-
+    14 000000D0 67696D20757A79746B-
+    14 000000D9 6F776E696B69656D2E-
+    14 000000E2 204B727A797A796B69-
+    14 000000EB 207069657277737A65-
+    14 000000F4 2077796B6F6E756A61-
+    14 000000FD 207275636821204162-
+    14 00000106 792077796A73632077-
+    14 0000010F 79626965727A205B30-
+    14 00000118 5D00               
+    15                                      info_user_message_len   equ     $-info_user_message
+    16                                  
+    17                                      ;Dane funkcji wyswietlajacej informacje przy wprowadzaniu ruchu przez krzyzyki
+    18 0000011A 52756368206B727A79-         x_selection_message     db      "Ruch krzyzykow[X]: ", 0
+    18 00000123 7A796B6F775B585D3A-
+    18 0000012C 2000               
+    19                                      x_selection_message_len equ     $-x_selection_message
+    20                                  
+    21                                      ;Dane funkcji wyswietlajacej informacje przy wprowadzaniu ruchu przez kolka
+    22 0000012E 52756368206B6F6C65-         o_selection_message     db      "Ruch kolek[O]: ", 0
+    22 00000137 6B5B4F5D3A2000     
+    23                                      o_selection_message_len equ     $-o_selection_message
+    24                                  
+    25                                      ;Dane funkcji przechodzacej do nowej lini
+    26 0000013E 0A0D                        new_line                db      0xA, 0xD
+    27                                      new_line_len            equ     $-new_line
+    28                                  
+    29                                      ;Symbole uzywane przez funkcje zapisujaca jaki ruch wykonal uzytkownik
+    30 00000140 58                          x_symbol                db     "X"
+    31 00000141 4F                          o_symbol                db     "O"
+    32                                  
+    33                                      ;Tablica do gry
+    34 00000142 313233343536373839          game_board              db      "1","2","3","4","5","6","7","8","9"
+    35                                  
+    36                                  
+    37                                      ;Dane powiazane z wyswietlaniem tablicy
+    38 0000014B 5F                          floor_symbol            db     "_"
+    39 0000014C 20                          space_symbol            db     " "
+    40 0000014D 7C                          pipe_symbol             db     "|"
+    41                                  
+    42                                  
+    43 0000014E 3F                          question_symbol         db     "?"
+    44                                  
+    45                                  
+    46                                  SECTION .bss
+    47                                      ;Przechowuje odczyt wyboru po komunikacie powitalnym
+    48 00000000 <res 00000100>              choice         resb    256 
+    49 00000100 <res 00000004>              choice_len      resb    4
+    50                                  
+    51 00000104 <res 0000000A>              read_len                resb    10
+    52                                  
+    53                                  
+    54                                  SECTION .text
+    55                                  global _start
+    56                                      
+    57                                  
+    58                                  _start:
+    59                                  
+    60                                  Main_Menu_Loop:
+    61 00000000 E840010000                  call Display_Welcome_Message
+    62 00000005 E8FC000000                  call Get_Choice
+    63                                  
+    64                                      ;Odpowiednik wykonania warunkowe skaczacy do odpowiedniego miejsca w zaleznosci od wyboru uzytkownika
+    65 0000000A 83F800                      cmp eax, 0
+    66 0000000D 7479                        je Exit
+    67 0000000F 83F801                      cmp eax, 1
+    68 00000012 744A                        je Play_With_PC
+    69 00000014 83F802                      cmp eax, 2
+    70 00000017 7402                        je Play_With_User
+    71 00000019 EBE5                        jmp Main_Menu_Loop
+    72                                  
+    73                                  Play_With_User:
+    74 0000001B E849010000                  call Display_Info_User
+    75                                      User_Menu_Loop:
+    76                                  
+    77                                      ;Obsluga krzyzykow
+    78 00000020 E86E000000                  call Display_Game_game_board
+    79 00000025 E8FB000000                  call Display_X_Selection
+    80 0000002A E8D7000000                  call Get_Choice
+    81 0000002F 83F800                      cmp eax, 0
+    82 00000032 7454                        je Exit
+    83                                  
+    84                                      ;Wstawianie krzyzyka do tablicy
+    85 00000034 BE[40010000]                mov esi, x_symbol
+    86 00000039 E8B9000000                  call Set_Sign_O_X
+    87                                  
+    88                                  
+    89                                      ;Obsluga kolek
+    90 0000003E E850000000                  call Display_Game_game_board
+    91 00000043 E8ED000000                  call Display_O_Selection
+    92 00000048 E8B9000000                  call Get_Choice
+    93 0000004D 83F800                      cmp eax, 0
+    94 00000050 7436                        je Exit
+    95                                  
+    96                                       ;Wstawianie kolka do tablicy do tablicy
+    97 00000052 BE[41010000]                mov esi, o_symbol
+    98 00000057 E89B000000                  call Set_Sign_O_X
+    99                                  
+   100 0000005C EBC2                        jmp User_Menu_Loop
+   101                                  
+   102                                  Play_With_PC:
+   103 0000005E E81B010000                  call Display_Info_PC
+   104                                      PC_Menu_Loop:
+   105                                  
+   106                                      ;Obsluga uzytkownika
+   107 00000063 E82B000000                  call Display_Game_game_board
+   108 00000068 E8B8000000                  call Display_X_Selection
+   109 0000006D E894000000                  call Get_Choice
+   110 00000072 83F800                      cmp eax, 0
+   111 00000075 7411                        je Exit
+   112                                      
+   113 00000077 E816000000                  call Check_Result
+   114                                  
+   115                                      ;Obsluga komputera
+   116 0000007C E810000000                  call Get_PC_Move
+   117                                     
+   118 00000081 E80C000000                  call Check_Result
+   119                                  
+   120 00000086 EBDB                        jmp PC_Menu_Loop
+   121                                  
+   122                                  
+   123                                  ;Konczenie dzialania programu
+   124                                  Exit:  
+   125 00000088 B801000000                  mov     eax, 1          
+   126 0000008D 31DB                        xor     ebx, ebx
+   127 0000008F CD80                        int     80H
+   128                                  
+   129                                  
+   130                                  ;Funkcje
+   131                                  
+   132                                  ;Funkcja losujaca ruch komputera
+   133                                  Get_PC_Move:
+   134                                  
+   135 00000091 C3                          ret
+   136                                  
+   137                                  ;Funkcja sprawdzajaca wynik
+   138                                  Check_Result:
+   139                                  
+   140 00000092 C3                          ret
+   141                                  
+   142                                  
+   143                                  
+   144                                  ; Funkcja wyswietla plansze do gry z aktualnymi wartosciami
+   145                                  Display_Game_game_board:
+   146 00000093 56                          push esi
+   147                                  
+   148                                      ;Trzy razy przechodzimy do nowej linii
+   149 00000094 E8FA000000                  call Enter_New_Line
+   150 00000099 E8F5000000                  call Enter_New_Line
+   151 0000009E E8F0000000                  call Enter_New_Line
+   152                                      ;Ustawienie licznika wierszy (posluzy nam za niego rejestr ecx)
+   153 000000A3 B903000000                  mov ecx, 3 
+   154                                      Print_Row_Loop:
+   155                                          ;Przerzucamy licznik na stos, aby go nie zniszczyć
+   156 000000A8 51                              push ecx
+   157                                          
+   158                                          ;Ustawienie licznika kolumn (posluzy nam za niego rejestr ecx)
+   159 000000A9 B903000000                      mov ecx, 3
+   160                                          Print_Column_Loop:
+   161                                  
+   162                                              ;Przerzucamy licznik na stos, aby go nie zniszczyć
+   163 000000AE 51                                  push ecx 
+   164                                  
+   165                                              ;kod nad ktorym pracujemy
+   166                                              ;Symbol_Print:
+   167 000000AF 59                                  pop ecx ;col
+   168 000000B0 BB03000000                          mov ebx, 3
+   169 000000B5 29CB                                sub ebx, ecx 
+   170                                   
+   171 000000B7 58                                  pop eax ;row 
+   172                                  
+   173 000000B8 50                                  push eax
+   174 000000B9 51                                  push ecx
+   175                                   
+   176 000000BA B903000000                          mov  ecx, 3
+   177 000000BF 29C1                                sub  ecx, eax
+   178 000000C1 6BC903                              imul ecx, 3
+   179 000000C4 01D9                                add ecx, ebx
+   180 000000C6 89C8                                mov eax, ecx
+   181                                  
+   182                                  
+   183                                              ;Wyswietlanie symbolu
+   184 000000C8 B9[42010000]                        mov ecx,  game_board
+   185 000000CD 01C1                                add ecx, eax
+   186 000000CF BA01000000                          mov edx, 1 ;dlugosc znaku
+   187 000000D4 E8CA000000                          call Print
+   188                                              
+   189                                  
+   190                                              
+   191                                  
+   192                                              ;Przyworcenie ze stosu licznika petli dla kolumny i dekrementacja
+   193 000000D9 59                                  pop ecx
+   194 000000DA 49                                  dec ecx
+   195 000000DB 75D1                                jnz Print_Column_Loop
+   196                                  
+   197                                          ;Przechodzimy do nowej linii.
+   198 000000DD E8B1000000                      call Enter_New_Line
+   199                                          
+   200                                          ;Zdejmujemy licznik petli ze stosu
+   201 000000E2 59                              pop ecx
+   202                                          ;Dekrementacja licznika petli dla wierszy
+   203 000000E3 49                              dec ecx
+   204 000000E4 75C2                            jnz Print_Row_Loop
+   205                                  
+   206                                      ;Trzy razy przechodzimy do nowej linii
+   207 000000E6 E8A8000000                  call Enter_New_Line
+   208 000000EB E8A3000000                  call Enter_New_Line
+   209 000000F0 E89E000000                  call Enter_New_Line
+   210                                  
+   211 000000F5 5E                          pop esi
+   212 000000F6 C3                          ret
+   213                                  
+   214                                  
+   215                                  ;Funkcja ustawia kolko lub krzyzyk na odpowiedniej pozycji w tablicy
+   216                                  ;W rejestrze eax podajemy miejsce w ktorym chcemy wstawic znak a w rejestrze esi znak ktory chcemy wstawic
+   217                                  Set_Sign_O_X:
+   218                                  
+   219                                      ;Znajdowanie pozycji na tablicy
+   220 000000F7 8A16                        mov dl,byte[esi]
+   221 000000F9 83E801                      sub eax, 1  
+   222 000000FC B9[42010000]                mov ecx, game_board
+   223 00000101 01C1                        add ecx, eax
+   224                                  
+   225                                      ;Wstawienie wartosci do tablicy
+   226 00000103 8811                        mov [ecx], dl
+   227 00000105 C3                          ret
+   228                                  
+   229                                  ;Funkcja pobierajaca wybor z klawiatury
+   230                                  Get_Choice:
+   231 00000106 B9[00000000]                mov ecx, choice
+   232 0000010B E8A0000000                  call Read
+   233 00000110 A1[04010000]                mov  eax, [read_len]
+   234 00000115 A3[00010000]                mov  [choice_len], eax
+   235                                  
+   236                                      ;Tutaj nastepuje konwersja wprowadzonej litery do cyfry
+   237 0000011A BE[00000000]                mov esi,  choice
+   238 0000011F E8A3000000                  call Convert_Char_To_Int
+   239 00000124 C3                          ret
+   240                                  
+   241                                  ;Funckaj wyswietlajaca komunikat z wyborem ruchu dla krzyzykow
+   242                                  Display_X_Selection:
+   243 00000125 B9[1A010000]                mov     ecx, x_selection_message 
+   244 0000012A BA14000000                  mov     edx, x_selection_message_len 
+   245 0000012F E86F000000                  call    Print
+   246 00000134 C3                          ret
+   247                                  
+   248                                  ;Funckaj wyswietlajaca komunikat z wyborem ruchu dla kolek
+   249                                  Display_O_Selection:
+   250 00000135 B9[2E010000]                mov     ecx, o_selection_message 
+   251 0000013A BA10000000                  mov     edx, o_selection_message_len 
+   252 0000013F E85F000000                  call    Print
+   253 00000144 C3                          ret
+   254                                  
+   255                                  ;Funkcja wyswietlajaca komunikat powitalny
+   256                                  Display_Welcome_Message:
+   257 00000145 B9[00000000]                mov     ecx, welcome_message 
+   258 0000014A BA23000000                  mov     edx, welcome_message_len 
+   259 0000014F E84F000000                  call    Print
+   260 00000154 E83A000000                  call Enter_New_Line
+   261 00000159 B9[23000000]                mov     ecx, selection_message
+   262 0000015E BA57000000                  mov     edx, selection_message_len 
+   263 00000163 E83B000000                  call    Print
+   264 00000168 C3                          ret
+   265                                  
+   266                                  ;Funkcja wyswietlajaca komunikat powitalny po wybraniu gry z drugim uzytkownikiem
+   267                                  Display_Info_User:
+   268 00000169 B9[BE000000]                mov     ecx, info_user_message 
+   269 0000016E BA5C000000                  mov     edx, info_user_message_len 
+   270 00000173 E82B000000                  call    Print
+   271 00000178 E816000000                  call Enter_New_Line
+   272 0000017D C3                          ret
+   273                                  
+   274                                  ;Funkcja wyswietlajaca komunikat powitalny po wybraniu gry z z komputerem
+   275                                  Display_Info_PC:
+   276 0000017E B9[7A000000]                mov     ecx, info_pc_message 
+   277 00000183 BA44000000                  mov     edx, info_pc_message_len 
+   278 00000188 E816000000                  call    Print
+   279 0000018D E801000000                  call Enter_New_Line
+   280 00000192 C3                          ret
+   281                                  
+   282                                  ;Funkcja przechodzaca do nowej lini Enter_New_Lin:
+   283                                  Enter_New_Line:
+   284 00000193 B9[3E010000]                mov     ecx, new_line
+   285 00000198 BA02000000                  mov     edx, new_line_len
+   286 0000019D E801000000                  call    Print
+   287 000001A2 C3                          ret
+   288                                  
+   289                                  ;Funkcja wyswietlajaca tekst podany na wejsciu
+   290                                  Print:
+   291 000001A3 B804000000                  mov     eax, 4
+   292 000001A8 BB01000000                  mov     ebx, 1
+   293 000001AD CD80                        int     80H 
+   294 000001AF C3                          ret
+   295                                  
+   296                                  ;Funkcja wczytujaca ciag tekstowy z klawiatury
+   297                                  Read:
+   298 000001B0 B803000000                  mov     eax, 3
+   299 000001B5 BB00000000                  mov     ebx, 0
+   300 000001BA BA32000000                  mov     edx, 50
+   301 000001BF CD80                        int     80H
+   302 000001C1 A3[04010000]                mov     [read_len], eax
+   303 000001C6 C3                          ret 
+   304                                  
+   305                                  ;Funkcja konwertujaca literę na cyfrę, w esi podajemy literę, a w eax otrzymujemy cyfrę
+   306                                  Convert_Char_To_Int: 
+   307 000001C7 0FB606                      movzx   eax, byte[esi] 
+   308 000001CA 2C30                        sub     al, '0'     
+   309 000001CC C3                          ret
