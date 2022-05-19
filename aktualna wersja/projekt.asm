@@ -160,23 +160,6 @@ Display_Game_game_board:
             ;Przerzucamy licznik na stos, aby go nie zniszczyć
             push ecx 
 
-
-            ;cmp eax, 1
-            ;je Space_Before
-            
-            ;printowanie pierwszej podłogi w każdym wierszu
-            ;mov ecx,  floor_symbol
-            ;mov edx, 1
-            ;call Print
-            
-            ;jmp Symbol_Print
-
-            ;Space_Before:
-
-                ;mov ecx,  question_symbol
-                ;mov edx, 1
-                ;call Print 
-
             Symbol_Print:
             pop ecx ;col
             mov ebx, 3
@@ -193,45 +176,17 @@ Display_Game_game_board:
             add ecx, ebx
             mov eax, ecx  
 
+            ;Wyswietlanie symbolu
             mov ecx,  game_board
             add ecx, eax
-            mov edx, 1
+            mov edx, 1 ;dlugosc znaku
             call Print
             
-            ; this fetches row number into eax
-            pop ecx
-            pop eax
-            push eax
-            push ecx
 
-            ;cmp eax, 2
-            ;jl Space_Print_After
-
-            ;mov ecx,  floor_symbol
-            ;mov edx, 1
-            ;call Print
-            ;jmp Skip_Space_Afer
-
-            ;Space_Print_After:
-                ;spacje w ostatniej linijce
-                ;mov ecx,  space_symbol 
-                ;mov edx, 1
-                ;call Print 
-
-
-            Skip_Space_Afer:
-            pop ecx
-            cmp ecx, 1
-            push ecx
-            je Print_Column_Loop_end
-
-            mov ecx,  pipe_symbol
-            mov edx, 1
-            call Print
-
-            Print_Column_Loop_end:
-            pop ecx
             
+
+            ;Przyworcenie ze stosu licznika petli dla kolumny i dekrementacja
+            pop ecx
             dec ecx
             jnz Print_Column_Loop
 
